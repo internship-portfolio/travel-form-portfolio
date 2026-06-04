@@ -32,6 +32,25 @@ export default function HomePage() {
           >
             フォームを作成する
           </Link>
+          <Link
+            href="/admin/forms"
+            className="block rounded border px-4 py-2 text-center font-bold hover:bg-gray-100"
+          >
+            フォーム一覧を開く
+          </Link>
+          <Link
+            href="/admin/firebase/forms"
+            className="block rounded border px-4 py-2 text-center font-bold hover:bg-gray-100"
+          >
+            Firebase版フォーム一覧を開く
+          </Link>
+
+          <Link
+            href="/admin/firebase/forms/new"
+            className="block rounded border px-4 py-2 text-center font-bold hover:bg-gray-100"
+          >
+            Firebase版フォームを作成する
+          </Link>
         </div>
       </div>
     </main>
