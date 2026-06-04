@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { collection, getDocs, orderBy, query } from 'firebase/firestore';
+import { collection, getDocs, query } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
 type FirebaseForm = {
@@ -14,17 +14,20 @@ type FirebaseForm = {
 };
 
 export default async function FirebaseFormsPage() {
-  const formsQuery = query(
-    collection(db, 'forms'),
-    orderBy('createdAt', 'desc')
-  );
+  const formsQuery = query(collection(db, 'forms'));
 
   const snapshot = await getDocs(formsQuery);
 
-  const forms: FirebaseForm[] = snapshot.docs.map((doc) => ({
-    id: doc.id,
-    ...doc.data(),
-  }));
+  const forms: FirebaseForm[] = snapshot.docs
+    .map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    } as FirebaseForm))
+    .sort((a, b) => {
+      const aTime = a.createdAt?.toDate().getTime() ?? 0;
+      const bTime = b.createdAt?.toDate().getTime() ?? 0;
+      return bTime - aTime;
+    });
 
   return (
     <main className="min-h-screen bg-gray-100 p-6">
@@ -61,6 +64,7 @@ export default async function FirebaseFormsPage() {
                   <th className="border p-2">公開URL</th>
                   <th className="border p-2">状態</th>
                   <th className="border p-2">作成日時</th>
+                  <th className="border p-2">操作</th>
                 </tr>
               </thead>
 
@@ -77,7 +81,6 @@ export default async function FirebaseFormsPage() {
 
                     <td className="border p-2">
                       {form.slug ? (
-                        
                         <Link
                           href={`/firebase/forms/${form.slug}`}
                           className="text-blue-600 underline"
@@ -97,6 +100,33 @@ export default async function FirebaseFormsPage() {
                       {form.createdAt
                         ? form.createdAt.toDate().toLocaleString('ja-JP')
                         : '-'}
+                    </td>
+
+                    <td className="border p-2">
+                      <div className="flex flex-col gap-2">
+                        {form.slug && (
+                          <Link
+                            href={`/firebase/forms/${form.slug}`}
+                            className="rounded bg-blue-600 px-3 py-1 text-center text-white hover:bg-blue-700"
+                          >
+                            公開フォーム
+                          </Link>
+                        )}
+
+                        <Link
+                          href={`/admin/firebase/forms/${form.id}/fields`}
+                          className="rounded bg-gray-700 px-3 py-1 text-center text-white hover:bg-gray-800"
+                        >
+                          質問項目編集
+                        </Link>
+
+                        <Link
+                          href={`/admin/firebase/forms/${form.id}/responses`}
+                          className="rounded bg-green-600 px-3 py-1 text-center text-white hover:bg-green-700"
+                        >
+                          回答一覧
+                        </Link>
+                      </div>
                     </td>
                   </tr>
                 ))}
