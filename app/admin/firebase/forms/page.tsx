@@ -1,6 +1,10 @@
-import Link from 'next/link';
-import { collection, getDocs, query } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+"use client";
+
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { collection, getDocs, query } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import AdminGuard from "@/components/AdminGuard";
 
 type FirebaseForm = {
   id: string;
@@ -13,21 +17,67 @@ type FirebaseForm = {
   };
 };
 
-export default async function FirebaseFormsPage() {
-  const formsQuery = query(collection(db, 'forms'));
+export default function FirebaseFormsPage() {
+  return (
+    <AdminGuard>
+      <FirebaseFormsContent />
+    </AdminGuard>
+  );
+}
 
-  const snapshot = await getDocs(formsQuery);
+function FirebaseFormsContent() {
+  const [forms, setForms] = useState<FirebaseForm[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState("");
 
-  const forms: FirebaseForm[] = snapshot.docs
-    .map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
-    } as FirebaseForm))
-    .sort((a, b) => {
-      const aTime = a.createdAt?.toDate().getTime() ?? 0;
-      const bTime = b.createdAt?.toDate().getTime() ?? 0;
-      return bTime - aTime;
-    });
+  useEffect(() => {
+    async function fetchForms() {
+      try {
+        const formsQuery = query(collection(db, "forms"));
+        const snapshot = await getDocs(formsQuery);
+
+        const formsData: FirebaseForm[] = snapshot.docs
+          .map((doc) => ({
+            id: doc.id,
+            ...doc.data(),
+          } as FirebaseForm))
+          .sort((a, b) => {
+            const aTime = a.createdAt?.toDate().getTime() ?? 0;
+            const bTime = b.createdAt?.toDate().getTime() ?? 0;
+            return bTime - aTime;
+          });
+
+        setForms(formsData);
+      } catch (error) {
+        console.error(error);
+        setErrorMessage("フォーム一覧の取得中にエラーが発生しました。");
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchForms();
+  }, []);
+
+  if (loading) {
+    return (
+      <main className="min-h-screen bg-gray-100 p-6">
+        <div className="mx-auto max-w-4xl rounded-xl bg-white p-6 shadow">
+          <p>フォーム一覧を読み込み中...</p>
+        </div>
+      </main>
+    );
+  }
+
+  if (errorMessage) {
+    return (
+      <main className="min-h-screen bg-gray-100 p-6">
+        <div className="mx-auto max-w-4xl rounded-xl bg-white p-6 shadow">
+          <p className="text-red-600">{errorMessage}</p>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="min-h-screen bg-gray-100 p-6">
@@ -72,11 +122,11 @@ export default async function FirebaseFormsPage() {
                 {forms.map((form) => (
                   <tr key={form.id}>
                     <td className="border p-2 font-medium">
-                      {form.title || '-'}
+                      {form.title || "-"}
                     </td>
 
                     <td className="border p-2">
-                      {form.description || '-'}
+                      {form.description || "-"}
                     </td>
 
                     <td className="border p-2">
@@ -93,13 +143,13 @@ export default async function FirebaseFormsPage() {
                     </td>
 
                     <td className="border p-2">
-                      {form.status || '-'}
+                      {form.status || "-"}
                     </td>
 
                     <td className="border p-2">
                       {form.createdAt
-                        ? form.createdAt.toDate().toLocaleString('ja-JP')
-                        : '-'}
+                        ? form.createdAt.toDate().toLocaleString("ja-JP")
+                        : "-"}
                     </td>
 
                     <td className="border p-2">
