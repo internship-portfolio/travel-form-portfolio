@@ -1,22 +1,27 @@
-import Link from 'next/link';
-import {
-  collection,
-  doc,
-  getDoc,
-  getDocs,
-  orderBy,
-  query,
-  where,
-} from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import { addFirebaseFormField } from '@/app/actions/firebase/addFirebaseFormField';
+import Link from 'next/link';//Nest.jsのページ遷移用のLink
 
+//firestore関係
+import {
+  collection,//firestoreのコレクションを指定する
+  doc,//firestoreの特定ドキュメントを指定
+  getDoc,//ドキュメントを1件取得
+  getDocs,//複数ドキュメントを取得
+  orderBy,//並び替え
+  query,//検索条件を作る
+  where,//条件指定
+} from 'firebase/firestore';
+import { db } from '@/lib/firebase';//データベースオブジェクト
+import { addFirebaseFormField } from '@/app/actions/firebase/addFirebaseFormField';//質問項目を追加する際に呼び出す関数
+
+//params: Promise<{...}>
+//今すぐ値があるとは限らないが後から値が返ってくる
 type Props = {
   params: Promise<{
     formId: string;
   }>;
 };
 
+//formsコレクションから取得するフォーム情報の型を宣言
 type FirebaseForm = {
   title?: string;
   description?: string;
@@ -24,6 +29,7 @@ type FirebaseForm = {
   status?: string;
 };
 
+//form_fieldsコレクションから取得する質問項目の型です
 type FirebaseField = {
   id: string;
   label?: string;
@@ -34,8 +40,10 @@ type FirebaseField = {
   sortOrder?: number;
 };
 
+//ページ本体
+//export default Next.jsはこの関数をページとして扱う
 export default async function FirebaseFormFieldsPage({ params }: Props) {
-  const { formId } = await params;
+  const { formId } = await params;//URLからformIdを取得
 
   const formRef = doc(db, 'forms', formId);
   const formSnapshot = await getDoc(formRef);
