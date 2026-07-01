@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { collection, getDocs, query } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import AdminGuard from "@/components/AdminGuard";
 
 type FirebaseForm = {
   id: string;
@@ -18,11 +17,7 @@ type FirebaseForm = {
 };
 
 export default function FirebaseFormsPage() {
-  return (
-    <AdminGuard>
-      <FirebaseFormsContent />
-    </AdminGuard>
-  );
+  return <FirebaseFormsContent />;
 }
 
 function FirebaseFormsContent() {

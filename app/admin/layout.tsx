@@ -7,6 +7,6 @@ type Props = {
   children: ReactNode;
 };
 
-export default function AdminFirebaseFormsLayout({ children }: Props) {
+export default function AdminLayout({ children }: Props) {
   return <AdminGuard>{children}</AdminGuard>;
 }
