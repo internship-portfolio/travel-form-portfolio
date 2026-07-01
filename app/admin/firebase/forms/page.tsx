@@ -27,6 +27,7 @@ function FirebaseFormsContent() {
 
   const [searchText, setSearchText] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [copiedFormId, setCopiedFormId] = useState("");
 
   useEffect(() => {
     async function fetchForms() {
@@ -89,6 +90,26 @@ function FirebaseFormsContent() {
       return matchesKeyword && matchesStatus;
     });
   }, [forms, searchText, statusFilter]);
+
+  async function handleCopyPublicUrl(form: FirebaseForm) {
+    if (!form.slug) {
+      return;
+    }
+
+    const publicUrl = `${window.location.origin}/firebase/forms/${form.slug}`;
+
+    try {
+      await navigator.clipboard.writeText(publicUrl);
+      setCopiedFormId(form.id);
+
+      setTimeout(() => {
+        setCopiedFormId("");
+      }, 2000);
+    } catch (error) {
+      console.error(error);
+      alert("URLのコピーに失敗しました。");
+    }
+  }
 
   if (loading) {
     return (
@@ -194,12 +215,24 @@ function FirebaseFormsContent() {
 
                     <td className="border p-2">
                       {form.slug ? (
-                        <Link
-                          href={`/firebase/forms/${form.slug}`}
-                          className="text-blue-600 underline"
-                        >
-                          /firebase/forms/{form.slug}
-                        </Link>
+                        <div className="flex flex-col gap-2">
+                          <Link
+                            href={`/firebase/forms/${form.slug}`}
+                            className="text-blue-600 underline"
+                          >
+                            /firebase/forms/{form.slug}
+                          </Link>
+
+                          <button
+                            type="button"
+                            onClick={() => handleCopyPublicUrl(form)}
+                            className="rounded bg-gray-700 px-3 py-1 text-white hover:bg-gray-800"
+                          >
+                            {copiedFormId === form.id
+                              ? "コピー済み"
+                              : "URLコピー"}
+                          </button>
+                        </div>
                       ) : (
                         <span className="text-gray-500">未設定</span>
                       )}
