@@ -1,5 +1,5 @@
 import Link from 'next/link';//Nest.jsのページ遷移用のLink
-
+import DeleteFieldButton from "./DeleteFieldButton";
 //firestore関係
 import {
   collection,//firestoreのコレクションを指定する
@@ -200,6 +200,7 @@ export default async function FirebaseFormFieldsPage({ params }: Props) {
                 <th className="border p-2">フィールド名</th>
                 <th className="border p-2">タイプ</th>
                 <th className="border p-2">必須</th>
+                <th className="border p-2">操作</th>
               </tr>
             </thead>
             <tbody>
@@ -211,6 +212,12 @@ export default async function FirebaseFormFieldsPage({ params }: Props) {
                   <td className="border p-2">{field.fieldType}</td>
                   <td className="border p-2">
                     {field.required ? '必須' : '任意'}
+                  </td>
+                  <td className="border p-2 text-center">
+                    <DeleteFieldButton
+                      fieldId={field.id}
+                      fieldLabel={field.label}
+                    />
                   </td>
                 </tr>
               ))}
