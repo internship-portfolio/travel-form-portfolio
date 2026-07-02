@@ -3,9 +3,9 @@ import {
   getDocs,
   query,
   where,
-} from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import { submitFirebaseResponse } from '@/app/actions/firebase/submitFirebaseResponse';
+} from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import { submitFirebaseResponse } from "@/app/actions/firebase/submitFirebaseResponse";
 
 type Props = {
   params: Promise<{
@@ -31,12 +31,26 @@ type FirebaseField = {
   sortOrder?: number;
 };
 
+type FormStatus = "draft" | "published" | "closed";
+
+function normalizeStatus(status?: string): FormStatus {
+  if (status === "published") {
+    return "published";
+  }
+
+  if (status === "closed") {
+    return "closed";
+  }
+
+  return "draft";
+}
+
 export default async function FirebasePublicFormPage({ params }: Props) {
   const { slug } = await params;
 
   const formsQuery = query(
-    collection(db, 'forms'),
-    where('slug', '==', slug)
+    collection(db, "forms"),
+    where("slug", "==", slug)
   );
 
   const formsSnapshot = await getDocs(formsQuery);
@@ -60,9 +74,37 @@ export default async function FirebasePublicFormPage({ params }: Props) {
     ...formDoc.data(),
   };
 
+  const formStatus = normalizeStatus(form.status);
+
+  if (formStatus === "draft") {
+    return (
+      <main className="min-h-screen bg-gray-100 p-6">
+        <div className="mx-auto max-w-3xl rounded-xl bg-white p-6 shadow">
+          <h1 className="text-2xl font-bold">フォームは非公開です</h1>
+          <p className="mt-4 text-gray-600">
+            このフォームは現在公開されていません。
+          </p>
+        </div>
+      </main>
+    );
+  }
+
+  if (formStatus === "closed") {
+    return (
+      <main className="min-h-screen bg-gray-100 p-6">
+        <div className="mx-auto max-w-3xl rounded-xl bg-white p-6 shadow">
+          <h1 className="text-2xl font-bold">受付終了</h1>
+          <p className="mt-4 text-gray-600">
+            このフォームは受付を終了しました。
+          </p>
+        </div>
+      </main>
+    );
+  }
+
   const fieldsQuery = query(
-    collection(db, 'form_fields'),
-    where('formId', '==', form.id)
+    collection(db, "form_fields"),
+    where("formId", "==", form.id)
   );
 
   const fieldsSnapshot = await getDocs(fieldsQuery);
@@ -71,7 +113,7 @@ export default async function FirebasePublicFormPage({ params }: Props) {
     .map((fieldDoc) => ({
       id: fieldDoc.id,
       ...fieldDoc.data(),
-    }as FirebaseField))
+    } as FirebaseField))
     .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
 
   return (
@@ -104,21 +146,21 @@ export default async function FirebasePublicFormPage({ params }: Props) {
 
                 <input type="hidden" name="field_ids" value={field.id} />
 
-                {field.fieldType === 'textarea' ? (
+                {field.fieldType === "textarea" ? (
                   <textarea
                     name={`field_${field.id}`}
                     required={field.required}
                     className="h-28 w-full rounded border p-2"
                   />
-                ) : field.fieldType === 'select' ? (
+                ) : field.fieldType === "select" ? (
                   <select
                     name={`field_${field.id}`}
                     required={field.required}
                     className="w-full rounded border p-2"
                   >
                     <option value="">選択してください</option>
-                    {String(field.options || '')
-                      .split(',')
+                    {String(field.options || "")
+                      .split(",")
                       .map((option) => option.trim())
                       .filter(Boolean)
                       .map((option) => (
@@ -127,7 +169,7 @@ export default async function FirebasePublicFormPage({ params }: Props) {
                         </option>
                       ))}
                   </select>
-                ) : field.fieldType === 'checkbox' ? (
+                ) : field.fieldType === "checkbox" ? (
                   <label className="flex items-center gap-2 rounded border p-3">
                     <input
                       type="checkbox"
@@ -139,7 +181,7 @@ export default async function FirebasePublicFormPage({ params }: Props) {
                   </label>
                 ) : (
                   <input
-                    type={field.fieldType || 'text'}
+                    type={field.fieldType || "text"}
                     name={`field_${field.id}`}
                     required={field.required}
                     className="w-full rounded border p-2"

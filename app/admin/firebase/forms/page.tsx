@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { collection, getDocs, query } from "firebase/firestore";
+import { collection, doc, getDocs, query, updateDoc, } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
 type FirebaseForm = {
@@ -16,6 +16,26 @@ type FirebaseForm = {
   };
 };
 
+type FormStatus = "draft" | "published" | "closed";
+
+const FORM_STATUS_OPTIONS: {value: FormStatus; label: String}[] = [
+  { value: "draft", label: "下書き"},
+  { value: "published", label: "公開中"},
+  { value: "closed", label: "受付停止"},
+];
+
+function normalizeStatus(status?: string): FormStatus {
+  if (status === "published") {
+    return "published";
+  }
+
+  if (status === "closed") {
+    return "closed";
+  }
+
+  return "draft";
+}
+
 export default function FirebaseFormsPage() {
   return <FirebaseFormsContent />;
 }
@@ -28,6 +48,7 @@ function FirebaseFormsContent() {
   const [searchText, setSearchText] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [copiedFormId, setCopiedFormId] = useState("");
+  const [updatingStatusFormId, setUpdatingStatusFormId] = useState("");
 
   useEffect(() => {
     async function fetchForms() {
@@ -110,6 +131,31 @@ function FirebaseFormsContent() {
       alert("URLのコピーに失敗しました。");
     }
   }
+  async function handleChangeStatus(formId: string, newStatus: FormStatus) {
+  try {
+    setUpdatingStatusFormId(formId);
+
+    await updateDoc(doc(db, "forms", formId), {
+      status: newStatus,
+    });
+
+    setForms((currentForms) =>
+      currentForms.map((form) =>
+        form.id === formId
+          ? {
+              ...form,
+              status: newStatus,
+            }
+          : form
+      )
+    );
+  } catch (error) {
+    console.error(error);
+    alert("ステータスの更新に失敗しました。");
+  } finally {
+    setUpdatingStatusFormId("");
+  }
+}
 
   if (loading) {
     return (
@@ -174,9 +220,9 @@ function FirebaseFormsContent() {
               className="w-full rounded border p-2"
             >
               <option value="all">すべて</option>
-              {statusList.map((status) => (
-                <option key={status} value={status}>
-                  {status}
+              {FORM_STATUS_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
                 </option>
               ))}
             </select>
@@ -238,7 +284,26 @@ function FirebaseFormsContent() {
                       )}
                     </td>
 
-                    <td className="border p-2">{form.status || "-"}</td>
+                    <td className="border p-2">
+                      <select
+                        value={normalizeStatus(form.status)}
+                        onChange={(event) =>
+                          handleChangeStatus(form.id, event.target.value as FormStatus)
+                        }
+                        disabled={updatingStatusFormId === form.id}
+                        className="w-full rounded border p-2"
+                      >
+                        {FORM_STATUS_OPTIONS.map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+
+                      {updatingStatusFormId === form.id && (
+                        <p className="mt-1 text-xs text-gray-500">更新中...</p>
+                      )}
+                    </td>
 
                     <td className="border p-2">
                       {form.createdAt
