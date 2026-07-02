@@ -11,7 +11,7 @@ import {
   where,//条件指定
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';//データベースオブジェクト
-import { addFirebaseFormField } from '@/app/actions/firebase/addFirebaseFormField';//質問項目を追加する際に呼び出す関数
+import AddFieldForm from "./AddFieldForm";//質問項目を追加する際に呼び出す関数
 
 //params: Promise<{...}>
 //今すぐ値があるとは限らないが後から値が返ってくる
@@ -108,86 +108,7 @@ export default async function FirebaseFormFieldsPage({ params }: Props) {
           </div>
         )}
 
-        <form
-          action={addFirebaseFormField}
-          className="mb-8 space-y-4 rounded border p-4"
-        >
-          <input type="hidden" name="form_id" value={formId} />
-
-          <div>
-            <label className="mb-1 block font-medium">質問名</label>
-            <input
-              type="text"
-              name="label"
-              required
-              className="w-full rounded border p-2"
-              placeholder="例：氏名"
-            />
-          </div>
-
-          <div>
-            <label className="mb-1 block font-medium">フィールド名</label>
-            <input
-              type="text"
-              name="field_name"
-              required
-              className="w-full rounded border p-2"
-              placeholder="例：name"
-            />
-            <p className="mt-1 text-sm text-gray-500">
-              半角英数字とアンダースコアで入力してください。例：passport_number
-            </p>
-          </div>
-
-          <div>
-            <label className="mb-1 block font-medium">入力タイプ</label>
-            <select
-              name="field_type"
-              required
-              className="w-full rounded border p-2"
-            >
-              <option value="text">1行テキスト</option>
-              <option value="textarea">複数行テキスト</option>
-              <option value="email">Email</option>
-              <option value="date">日付</option>
-              <option value="select">選択式</option>
-              <option value="checkbox">チェックボックス</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="mb-1 block font-medium">選択肢</label>
-            <textarea
-              name="options"
-              className="h-20 w-full rounded border p-2"
-              placeholder="選択式の場合のみ入力。例：男性,女性,その他"
-            />
-          </div>
-
-          <div>
-            <label className="flex items-center gap-2">
-              <input type="checkbox" name="required" value="true" />
-              <span>必須項目にする</span>
-            </label>
-          </div>
-
-          <div>
-            <label className="mb-1 block font-medium">表示順</label>
-            <input
-              type="number"
-              name="sort_order"
-              defaultValue="0"
-              className="w-full rounded border p-2"
-            />
-          </div>
-
-          <button
-            type="submit"
-            className="rounded bg-blue-600 px-4 py-2 font-bold text-white hover:bg-blue-700"
-          >
-            質問項目を追加
-          </button>
-        </form>
+        <AddFieldForm formId={formId} />
 
         <h2 className="mb-3 text-xl font-bold">現在の質問項目</h2>
 
