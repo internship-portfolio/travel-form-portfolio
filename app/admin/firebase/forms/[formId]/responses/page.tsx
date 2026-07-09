@@ -65,7 +65,7 @@ export default function FirebaseFormResponsesPage({ params }: Props) {
   const [responses, setResponses] = useState<FirebaseResponse[]>([]);
   const [answers, setAnswers] = useState<FirebaseAnswer[]>([]);
   const [errorMessage, setErrorMessage] = useState("");
-
+　const [searchText, setSearchText] = useState("");
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       try {
@@ -164,13 +164,36 @@ export default function FirebaseFormResponsesPage({ params }: Props) {
     return () => unsubscribe();
   }, [formId, router]);
 
+  
   function getAnswerValue(responseId: string, fieldId: string) {
-    const answer = answers.find(
-      (item) => item.responseId === responseId && item.fieldId === fieldId
+  const answer = answers.find(
+    (item) => item.responseId === responseId && item.fieldId === fieldId
+  );
+
+  return answer?.value || "";
+  }
+
+  const filteredResponses = responses.filter((response) => {
+    const keyword = searchText.trim().toLowerCase();
+
+    if (!keyword) {
+      return true;
+    }
+
+    const submittedAt = response.createdAt
+      ? response.createdAt.toDate().toLocaleString("ja-JP")
+      : "";
+
+    const answerValues = fields.map((field) =>
+      getAnswerValue(response.id, field.id)
     );
 
-    return answer?.value ?? "";
-  }
+    const searchableText = [submittedAt, ...answerValues]
+      .join(" ")
+      .toLowerCase();
+
+    return searchableText.includes(keyword);
+  });
 
   function escapeCsvValue(value: string) {
     const escapedValue = value.replace(/"/g, '""');
@@ -306,6 +329,33 @@ export default function FirebaseFormResponsesPage({ params }: Props) {
 
         <div className="mb-4 rounded bg-blue-50 p-4 text-sm text-blue-800">
           回答件数：{responses.length} 件
+          {searchText.trim() && (
+            <span className="ml-2">
+              / 検索結果：{filteredResponses.length} 件
+            </span>
+          )}
+        </div>
+
+        <div className="mb-4 rounded border bg-white p-4">
+          <label className="mb-2 block font-bold">回答検索</label>
+
+          <input
+            type="text"
+            value={searchText}
+            onChange={(event) => setSearchText(event.target.value)}
+            placeholder="氏名、Email、Passport Number、Nationality などで検索"
+            className="w-full rounded border p-2"
+          />
+
+          {searchText.trim() && (
+            <button
+              type="button"
+              onClick={() => setSearchText("")}
+              className="mt-2 rounded border px-3 py-1 text-sm hover:bg-gray-100"
+            >
+              検索をクリア
+            </button>
+          )}
         </div>
 
         {fields.length === 0 ? (
@@ -315,6 +365,10 @@ export default function FirebaseFormResponsesPage({ params }: Props) {
         ) : responses.length === 0 ? (
           <p className="rounded border p-4 text-gray-600">
             まだ回答はありません。
+          </p>
+        ) : filteredResponses.length === 0 ? (
+          <p className="rounded border p-4 text-gray-600">
+            検索条件に一致する回答はありません。
           </p>
         ) : (
           <div className="overflow-x-auto">
@@ -332,7 +386,7 @@ export default function FirebaseFormResponsesPage({ params }: Props) {
               </thead>
 
               <tbody>
-                {responses.map((response) => (
+                {filteredResponses.map((response) => (
                   <tr key={response.id}>
                     <td className="border p-2 text-center">
                       <Link
@@ -349,19 +403,11 @@ export default function FirebaseFormResponsesPage({ params }: Props) {
                         : "-"}
                     </td>
 
-                    {fields.map((field) => {
-                      const answer = answers.find(
-                        (item) =>
-                          item.responseId === response.id &&
-                          item.fieldId === field.id
-                      );
-
-                      return (
-                        <td key={field.id} className="border p-2">
-                          {answer?.value || "-"}
-                        </td>
-                      );
-                    })}
+                    {fields.map((field) => (
+                      <td key={field.id} className="border p-2">
+                        {getAnswerValue(response.id, field.id) || "-"}
+                      </td>
+                    ))}
                   </tr>
                 ))}
               </tbody>
