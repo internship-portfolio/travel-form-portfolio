@@ -321,6 +321,7 @@ export default function FirebaseFormResponsesPage({ params }: Props) {
             <table className="w-full min-w-[1000px] border-collapse border text-sm">
               <thead>
                 <tr className="bg-gray-200">
+                  <th className="border p-2">操作</th>
                   <th className="border p-2">送信日時</th>
                   {fields.map((field) => (
                     <th key={field.id} className="border p-2">
@@ -333,6 +334,15 @@ export default function FirebaseFormResponsesPage({ params }: Props) {
               <tbody>
                 {responses.map((response) => (
                   <tr key={response.id}>
+                    <td className="border p-2 text-center">
+                      <Link
+                        href={`/admin/firebase/forms/${formId}/responses/${response.id}`}
+                        className="rounded bg-blue-600 px-3 py-1 font-bold text-white hover:bg-blue-700"
+                      >
+                        詳細
+                      </Link>
+                    </td>
+
                     <td className="border p-2">
                       {response.createdAt
                         ? response.createdAt.toDate().toLocaleString("ja-JP")
