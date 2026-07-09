@@ -152,13 +152,23 @@ export default async function FirebasePublicFormPage({ params }: Props) {
                     required={field.required}
                     className="h-28 w-full rounded border p-2"
                   />
+                ) : field.fieldType === "date" ? (
+                  <input
+                    type="text"
+                    name={`field_${field.id}`}
+                    required={field.required}
+                    placeholder="YYYY/MM/DD"
+                    pattern="\d{4}-\d{2}-\d{2}"
+                    title="Please enter the date in YYYY-MM-DD format."
+                    className="w-full rounded border p-2"
+                  />
                 ) : field.fieldType === "select" ? (
                   <select
                     name={`field_${field.id}`}
                     required={field.required}
                     className="w-full rounded border p-2"
                   >
-                    <option value="">選択してください</option>
+                    <option value="">Please select</option>
                     {String(field.options || "")
                       .split(",")
                       .map((option) => option.trim())
@@ -177,7 +187,7 @@ export default async function FirebasePublicFormPage({ params }: Props) {
                       value="true"
                       required={field.required}
                     />
-                    <span>確認しました</span>
+                    <span>I confirm</span>
                   </label>
                 ) : (
                   <input
@@ -194,7 +204,7 @@ export default async function FirebasePublicFormPage({ params }: Props) {
               type="submit"
               className="w-full rounded bg-blue-600 px-4 py-2 font-bold text-white hover:bg-blue-700"
             >
-              送信する
+              Submit
             </button>
           </form>
         )}

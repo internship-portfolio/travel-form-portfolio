@@ -1,4 +1,5 @@
 import Link from 'next/link';//Nest.jsのページ遷移用のLink
+import EditFieldButton from "./EditFieldButton";
 import DeleteFieldButton from "./DeleteFieldButton";
 //firestore関係
 import {
@@ -12,7 +13,6 @@ import {
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';//データベースオブジェクト
 import AddFieldForm from "./AddFieldForm";//質問項目を追加する際に呼び出す関数
-
 //params: Promise<{...}>
 //今すぐ値があるとは限らないが後から値が返ってくる
 type Props = {
@@ -68,10 +68,19 @@ export default async function FirebaseFormFieldsPage({ params }: Props) {
 
   const fieldsSnapshot = await getDocs(fieldsQuery);
 
-  const fields: FirebaseField[] = fieldsSnapshot.docs.map((fieldDoc) => ({
-    id: fieldDoc.id,
-    ...fieldDoc.data(),
-  }));
+  const fields: FirebaseField[] = fieldsSnapshot.docs.map((fieldDoc) => {
+    const data = fieldDoc.data();
+
+    return {
+      id: fieldDoc.id,
+      label: typeof data.label === "string" ? data.label : "",
+      fieldName: typeof data.fieldName === "string" ? data.fieldName : "",
+      fieldType: typeof data.fieldType === "string" ? data.fieldType : "text",
+      options: typeof data.options === "string" ? data.options : "",
+      required: typeof data.required === "boolean" ? data.required : false,
+      sortOrder: typeof data.sortOrder === "number" ? data.sortOrder : 0,
+    };
+  });
 
   return (
     <main className="min-h-screen bg-gray-100 p-6">
@@ -134,11 +143,15 @@ export default async function FirebaseFormFieldsPage({ params }: Props) {
                   <td className="border p-2">
                     {field.required ? '必須' : '任意'}
                   </td>
-                  <td className="border p-2 text-center">
-                    <DeleteFieldButton
-                      fieldId={field.id}
-                      fieldLabel={field.label}
-                    />
+                  <td className="border p-2">
+                    <div className="flex flex-col gap-2">
+                      <EditFieldButton field={field} />
+
+                      <DeleteFieldButton
+                        fieldId={field.id}
+                        fieldLabel={field.label}
+                      />
+                    </div>
                   </td>
                 </tr>
               ))}
