@@ -164,6 +164,68 @@ export default function FirebaseFormResponsesPage({ params }: Props) {
     return () => unsubscribe();
   }, [formId, router]);
 
+  function getAnswerValue(responseId: string, fieldId: string) {
+    const answer = answers.find(
+      (item) => item.responseId === responseId && item.fieldId === fieldId
+    );
+
+    return answer?.value ?? "";
+  }
+
+  function escapeCsvValue(value: string) {
+    const escapedValue = value.replace(/"/g, '""');
+
+    return `"${escapedValue}"`;
+  }
+
+  function handleDownloadCsv() {
+    if (responses.length === 0) {
+      alert("ダウンロードできる回答がありません。");
+      return;
+    }
+
+    const header = [
+      "Submitted At",
+      ...fields.map((field) => field.label || field.fieldName || field.id),
+    ];
+
+    const rows = responses.map((response) => {
+      const submittedAt = response.createdAt
+        ? response.createdAt.toDate().toLocaleString("ja-JP")
+        : "";
+
+      return [
+        submittedAt,
+        ...fields.map((field) => getAnswerValue(response.id, field.id)),
+      ];
+    });
+
+    const csvContent = [header, ...rows]
+      .map((row) => row.map((value) => escapeCsvValue(String(value))).join(","))
+      .join("\r\n");
+
+    // Excelで文字化けしにくいようにBOMを付ける
+    const bom = "\uFEFF";
+    const blob = new Blob([bom + csvContent], {
+      type: "text/csv;charset=utf-8;",
+    });
+
+    const url = URL.createObjectURL(blob);
+
+    const fileNameBase = form?.title
+      ? form.title.replace(/[\\/:*?"<>|]/g, "_")
+      : "responses";
+
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${fileNameBase}_responses.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    URL.revokeObjectURL(url);
+  }
+
   if (checkingAuth || loading) {
     return (
       <main className="min-h-screen bg-gray-100 p-6">
@@ -207,6 +269,16 @@ export default function FirebaseFormResponsesPage({ params }: Props) {
           </div>
 
           <div className="flex gap-2">
+
+            <button
+              type="button"
+              onClick={handleDownloadCsv}
+              disabled={responses.length === 0}
+              className="rounded bg-green-600 px-4 py-2 font-bold text-white hover:bg-green-700 disabled:bg-gray-400"
+            >
+              CSVダウンロード
+            </button>
+            
             <Link
               href="/admin/firebase/forms"
               className="rounded border px-4 py-2 font-bold hover:bg-gray-100"
