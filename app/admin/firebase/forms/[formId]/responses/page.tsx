@@ -10,6 +10,7 @@ import {
   getDoc,
   getDocs,
   query,
+  updateDoc,
   where,
 } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
@@ -37,9 +38,36 @@ type FirebaseField = {
   sortOrder?: number;
 };
 
+type ResponseStatus =
+  | "new"
+  | "checking"
+  | "confirmed"
+  | "completed"
+  | "cancelled";
+
+const RESPONSE_STATUS_OPTIONS: {
+  value: ResponseStatus;
+  label: string;
+}[] = [
+  { value: "new", label: "未対応" },
+  { value: "checking", label: "確認中" },
+  { value: "confirmed", label: "確認済み" },
+  { value: "completed", label: "対応完了" },
+  { value: "cancelled", label: "キャンセル" },
+];
+
+function normalizeResponseStatus(status?: string): ResponseStatus {
+  if (status === "checking") return "checking";
+  if (status === "confirmed") return "confirmed";
+  if (status === "completed") return "completed";
+  if (status === "cancelled") return "cancelled";
+  return "new";
+}
+
 type FirebaseResponse = {
   id: string;
   formId?: string;
+  status?: string;
   createdAt?: {
     toDate: () => Date;
   };
@@ -164,7 +192,28 @@ export default function FirebaseFormResponsesPage({ params }: Props) {
     return () => unsubscribe();
   }, [formId, router]);
 
-  
+  async function handleUpdateResponseStatus(
+    responseId: string,
+    newStatus: ResponseStatus
+  ) {
+    try {
+      await updateDoc(doc(db, "responses", responseId), {
+        status: newStatus,
+      });
+
+      setResponses((currentResponses) =>
+        currentResponses.map((response) =>
+          response.id === responseId
+            ? { ...response, status: newStatus }
+            : response
+        )
+      );
+    } catch (error) {
+      console.error(error);
+      alert("回答ステータスの更新に失敗しました。");
+    }
+  }
+
   function getAnswerValue(responseId: string, fieldId: string) {
   const answer = answers.find(
     (item) => item.responseId === responseId && item.fieldId === fieldId
@@ -376,6 +425,7 @@ export default function FirebaseFormResponsesPage({ params }: Props) {
               <thead>
                 <tr className="bg-gray-200">
                   <th className="border p-2">操作</th>
+                  <th className="border p-2">ステータス</th>
                   <th className="border p-2">送信日時</th>
                   {fields.map((field) => (
                     <th key={field.id} className="border p-2">
@@ -395,6 +445,25 @@ export default function FirebaseFormResponsesPage({ params }: Props) {
                       >
                         詳細
                       </Link>
+                    </td>
+
+                    <td className="border p-2">
+                      <select
+                        value={normalizeResponseStatus(response.status)}
+                        onChange={(event) =>
+                          handleUpdateResponseStatus(
+                            response.id,
+                            event.target.value as ResponseStatus
+                          )
+                        }
+                        className="rounded border p-2"
+                      >
+                        {RESPONSE_STATUS_OPTIONS.map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
                     </td>
 
                     <td className="border p-2">
