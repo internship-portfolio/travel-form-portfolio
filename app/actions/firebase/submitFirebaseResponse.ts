@@ -5,12 +5,46 @@ import {
   collection,
   doc,
   getDoc,
+  getDocs,
+  query,
   serverTimestamp,
+  where,
   writeBatch,
 } from "firebase/firestore";
 import { Resend } from "resend";
 
 import { db } from "@/lib/firebase";
+
+/**
+ * HTMLメールにユーザー入力をそのまま埋め込まないためのエスケープ処理
+ */
+function escapeHtml(value: string) {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+/**
+ * FormDataの値を文字列へ変換
+ * checkbox等で複数値があれば「, 」で連結する
+ */
+function getFormValue(formData: FormData, fieldId: string) {
+  const values = formData.getAll(`field_${fieldId}`);
+
+  return values
+    .map((value) => {
+      if (typeof value === "string") {
+        return value;
+      }
+
+      // Fileが来た場合
+      return value.name ? `[ファイル: ${value.name}]` : "[ファイル]";
+    })
+    .join(", ");
+}
 
 export async function submitFirebaseResponse(formData: FormData) {
   const formId = formData.get("form_id") as string;
@@ -20,9 +54,9 @@ export async function submitFirebaseResponse(formData: FormData) {
     throw new Error("フォーム情報が不足しています");
   }
 
-  // --------------------------------------
-  // 1. フォームが公開中か確認
-  // --------------------------------------
+  // ==================================================
+  // 1. フォーム情報を取得
+  // ==================================================
 
   const formRef = doc(db, "forms", formId);
   const formSnap = await getDoc(formRef);
@@ -37,17 +71,48 @@ export async function submitFirebaseResponse(formData: FormData) {
     throw new Error("このフォームは現在回答を受け付けていません。");
   }
 
-  // --------------------------------------
-  // 2. response用のIDを先に生成
-  // --------------------------------------
+  // ==================================================
+  // 2. form_fields を取得
+  // ==================================================
 
-  // この時点ではまだFirestoreには保存されない
+  const fieldsQuery = query(
+    collection(db, "form_fields"),
+    where("formId", "==", formId)
+  );
+
+  const fieldsSnapshot = await getDocs(fieldsQuery);
+
+  // fieldId → label の対応表
+  const fieldLabelMap = new Map<string, string>();
+
+  fieldsSnapshot.forEach((fieldDoc) => {
+    const data = fieldDoc.data();
+
+    fieldLabelMap.set(
+      fieldDoc.id,
+      String(data.label ?? data.fieldName ?? fieldDoc.id)
+    );
+  });
+
+  // ==================================================
+  // 3. 今回送信された全回答をまとめる
+  // ==================================================
+
+  const submittedAnswers = fieldIds.map((fieldId) => {
+    const value = getFormValue(formData, fieldId);
+
+    return {
+      fieldId,
+      label: fieldLabelMap.get(fieldId) ?? fieldId,
+      value,
+    };
+  });
+
+  // ==================================================
+  // 4. response IDを先に生成
+  // ==================================================
+
   const responseRef = doc(collection(db, "responses"));
-
-  // --------------------------------------
-  // 3. responses + response_answersを
-  //    同じbatchに入れる
-  // --------------------------------------
 
   const batch = writeBatch(db);
 
@@ -56,29 +121,146 @@ export async function submitFirebaseResponse(formData: FormData) {
     createdAt: serverTimestamp(),
   });
 
-  fieldIds.forEach((fieldId) => {
-    const value = String(formData.get(`field_${fieldId}`) ?? "");
+  // ==================================================
+  // 5. 全回答を response_answers へ保存
+  // ==================================================
 
+  submittedAnswers.forEach((answer) => {
     const answerRef = doc(collection(db, "response_answers"));
 
     batch.set(answerRef, {
       responseId: responseRef.id,
       formId,
-      fieldId,
-      value,
+      fieldId: answer.fieldId,
+      value: answer.value,
       createdAt: serverTimestamp(),
     });
   });
 
-  // --------------------------------------
-  // 4. 全回答を一括保存
-  // --------------------------------------
-
+  // responses と answers を一括保存
   await batch.commit();
 
-  // --------------------------------------
-  // 5. 管理者へ通知メール
-  // --------------------------------------
+  // ==================================================
+  // 6. メール本文作成
+  // ==================================================
+
+  const submittedAt = new Intl.DateTimeFormat("ja-JP", {
+    dateStyle: "long",
+    timeStyle: "medium",
+    timeZone: "Asia/Tokyo",
+  }).format(new Date());
+
+  // プレーンテキスト版
+  const answersText = submittedAnswers
+    .map((answer) => {
+      return `${answer.label}
+${answer.value || "未入力"}`;
+    })
+    .join("\n\n------------------------------\n\n");
+
+  const textBody = `
+新しい旅行申請が届きました。
+
+================================
+申請情報
+================================
+
+フォーム名：
+${formDocData.title ?? "名称未設定"}
+
+申請日時：
+${submittedAt}
+
+申請ID：
+${responseRef.id}
+
+================================
+回答内容
+================================
+
+${answersText}
+
+================================
+以上
+================================
+`;
+
+  // HTML版
+  const answersHtml = submittedAnswers
+    .map((answer) => {
+      const label = escapeHtml(answer.label);
+      const value = escapeHtml(answer.value || "未入力").replaceAll(
+        "\n",
+        "<br>"
+      );
+
+      return `
+        <tr>
+          <th
+            style="
+              text-align:left;
+              vertical-align:top;
+              padding:10px;
+              border:1px solid #cccccc;
+              background:#f5f5f5;
+              width:35%;
+            "
+          >
+            ${label}
+          </th>
+
+          <td
+            style="
+              padding:10px;
+              border:1px solid #cccccc;
+            "
+          >
+            ${value}
+          </td>
+        </tr>
+      `;
+    })
+    .join("");
+
+  const htmlBody = `
+<!DOCTYPE html>
+<html lang="ja">
+  <body style="font-family:Arial, sans-serif; line-height:1.6;">
+    <h2>新しい旅行申請が届きました</h2>
+
+    <p>
+      <strong>フォーム名：</strong>
+      ${escapeHtml(String(formDocData.title ?? "名称未設定"))}
+    </p>
+
+    <p>
+      <strong>申請日時：</strong>
+      ${escapeHtml(submittedAt)}
+    </p>
+
+    <p>
+      <strong>申請ID：</strong>
+      ${escapeHtml(responseRef.id)}
+    </p>
+
+    <h3>申請内容</h3>
+
+    <table
+      style="
+        border-collapse:collapse;
+        width:100%;
+        max-width:900px;
+      "
+    >
+      ${answersHtml}
+    </table>
+  </body>
+</html>
+`;
+
+  // ==================================================
+  // 7. Resendで管理者へ送信
+  // ==================================================
 
   try {
     const apiKey = process.env.RESEND_API_KEY;
@@ -96,19 +278,11 @@ export async function submitFirebaseResponse(formData: FormData) {
 
         to: [adminEmail],
 
-        subject: "【新規旅行申請】新しい申請が届きました",
+        subject: "【新規旅行申請】申請内容を受信しました",
 
-        text: `
-新しい旅行申請が届きました。
+        text: textBody,
 
-フォーム名：
-${formDocData.title ?? "名称未設定"}
-
-申請ID：
-${responseRef.id}
-
-管理画面から申請内容をご確認ください。
-        `,
+        html: htmlBody,
       });
 
       if (error) {
@@ -121,9 +295,9 @@ ${responseRef.id}
     console.error("管理者メール通知処理でエラー:", error);
   }
 
-  // --------------------------------------
-  // 6. 完了画面
-  // --------------------------------------
+  // ==================================================
+  // 8. 完了ページへ
+  // ==================================================
 
   redirect("/complete");
 }
