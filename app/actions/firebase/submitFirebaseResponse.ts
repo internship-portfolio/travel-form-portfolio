@@ -265,16 +265,19 @@ ${answersText}
   try {
     const apiKey = process.env.RESEND_API_KEY;
     const adminEmail = process.env.ADMIN_EMAIL;
+    const fromEmail = process.env.RESEND_FROM_EMAIL;
 
     if (!apiKey) {
       console.error("RESEND_API_KEYが設定されていません");
     } else if (!adminEmail) {
       console.error("ADMIN_EMAILが設定されていません");
-    } else {
+    } else if (!fromEmail) {
+      console.error("RESEND_FROM_EMAILが設定されていません");
+    }else {
       const resend = new Resend(apiKey);
 
       const { data, error } = await resend.emails.send({
-        from: "Travel System <onboarding@resend.dev>",
+        from: `Travel System <${fromEmail}>`,
 
         to: [adminEmail],
 
