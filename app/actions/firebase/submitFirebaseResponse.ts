@@ -484,7 +484,6 @@ ${responseRef.id}
       // ================================================
 
       const {
-        data: adminMailData,
         error: adminMailError,
       } = await resend.emails.send({
         from: `Travel System <${fromEmail}>`,
@@ -504,11 +503,6 @@ ${responseRef.id}
           "管理者メール送信エラー:",
           adminMailError
         );
-      } else {
-        console.log(
-          "管理者メール送信成功:",
-          adminMailData?.id
-        );
       }
 
       // ================================================
@@ -516,7 +510,6 @@ ${responseRef.id}
       // ================================================
 
       const {
-        data: applicantMailData,
         error: applicantMailError,
       } = await resend.emails.send({
         from: `Travel System <${fromEmail}>`,
@@ -535,11 +528,6 @@ ${responseRef.id}
         console.error(
           "申請者確認メール送信エラー:",
           applicantMailError
-        );
-      } else {
-        console.log(
-          "申請者確認メール送信成功:",
-          applicantMailData?.id
         );
       }
     }

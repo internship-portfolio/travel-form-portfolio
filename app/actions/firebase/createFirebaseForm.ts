@@ -18,18 +18,10 @@ import { db } from "@/lib/firebase"; // Firestoreに接続するためのオブ�
   FormData: フォームから送信されたデータを受け取る
 */
 export async function createFirebaseForm(formData: FormData) {
-  console.log("createFirebaseForm が呼ばれました");
-
   // フォームから送信されたデータを文字列として取得
   const title = formData.get("title") as string;
   const description = formData.get("description") as string;
   const slug = formData.get("slug") as string;
-
-  console.log("入力値:", {
-    title,
-    description,
-    slug,
-  });
 
   // title、slugが未入力の場合エラーを出力
   if (!title || !slug) {
@@ -94,8 +86,6 @@ export async function createFirebaseForm(formData: FormData) {
     });
 
     createdFormId = docRef.id;
-
-    console.log("Firestore保存成功:", createdFormId);
   } catch (error) {
     console.error("Firestore保存エラー:", error);
     throw new Error("Firestoreへの保存に失敗しました");

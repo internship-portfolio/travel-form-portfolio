@@ -103,11 +103,6 @@ export default function FirebaseFormResponsesPage({ params }: Props) {
         }
 
         const tokenResult = await currentUser.getIdTokenResult(true);
-        
-
-        console.log("ログインユーザー:", currentUser.email);
-        console.log("UID:", currentUser.uid);
-        console.log("claims:", tokenResult.claims);
 
         if (tokenResult.claims.admin !== true) {
           alert("管理者権限がありません");
@@ -350,7 +345,7 @@ export default function FirebaseFormResponsesPage({ params }: Props) {
             >
               CSVダウンロード
             </button>
-            
+
             <Link
               href="/admin/firebase/forms"
               className="rounded border px-4 py-2 font-bold hover:bg-gray-100"

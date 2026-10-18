@@ -16,10 +16,8 @@ export default function AdminGuard({ children }: AdminGuardProps) {
   const [user, setUser] = useState<User | null>(null);
 
   useEffect(() => {
-    console.log("AdminGuard が実行されました");
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       if (!currentUser) {
-        console.log("未ログインなので /login に移動します");
         setUser(null);
         setChecking(false);
         router.push("/login");
@@ -27,10 +25,8 @@ export default function AdminGuard({ children }: AdminGuardProps) {
       }
 
       const tokenResult = await currentUser.getIdTokenResult(true);
-      console.log("claims:", tokenResult.claims);
 
       if (tokenResult.claims.admin !== true) {
-        console.log("管理者ではないので /login に移動します");
         setUser(null);
         setChecking(false);
         alert("管理者権限がありません");
